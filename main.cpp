@@ -15,23 +15,24 @@ static const char *auth, *serv;
 static uint16_t port;
  
 #include <BlynkWidgets.h>
- 
+#include <wiringPi.h>
+#include <wiringPiI2C.h>
+#include <stdio.h> //For printf functions
+#include <stdlib.h> // For system functions
+
 int buttonPin = 17; //GPIO17 Pin on the Pi
 bool buttonState = false;  //Used to store the previous state of the button
 int LEDPin = 23;// physical LED
 //terminals and lables/=value dsiplay
-WidgetTerminal terminal(V1);
-//Widget
 BlynkTimer timer;
 void sensorDataSend(void);
 int sensorValue;
+void alarm (void);
+long lastInterruptTime = 0; //Used for button debounce
+//void resetfunc (void);
+//void  startRTC (void);
 
-/*BLYNK_READ(V1)
-{
-	terminal.println("Hello bitch");
-	terminal.flush();
 
-}*/
 void setup()
 {
     //SETUP BLYNK
@@ -41,14 +42,10 @@ void setup()
     pullUpDnControl (buttonPin, PUD_UP); //Set GPIO17 internal pull up
     pinMode(LEDPin, OUTPUT);//set external LED
 
-    //terminal stuff
-	/*
-    terminal.println(F("Blynk v" BLYNK_VERSION ": Device started"));
-    terminal.println(F("-------------"));
-    terminal.println(F("Type 'Marco' and get a reply, or type"));
-    terminal.println(F("anything else and get it printed back."));
-    terminal.flush();*/
     timer.setInterval(1000L, sensorDataSend); //timer will run every sec
+    //buttons
+    wiringPiISR (buttonPin, INT_EDGE_FALLING,alarm); // setting up interupt for button to call method hourInc.
+
 }
  
 void loop()
@@ -63,7 +60,6 @@ void sensorDataSend(){
 }
 
 void button(){
-	
 if(buttonState != digitalRead(buttonPin)) //check the button state against its last known value, i$
     {
        if(digitalRead(buttonPin) == TRUE) //if true, set the Virtual Pin "V0" to a value of 0 (full of$
@@ -81,10 +77,7 @@ if(buttonState != digitalRead(buttonPin)) //check the button state against its l
     else {}    //if last value = current value, we do nothing.
 
 buttonState = digitalRead(buttonPin);  //update the button state.
-
-
-
-}
+}//end of button
  
 int main(int argc, char* argv[])
 {   
@@ -95,9 +88,25 @@ int main(int argc, char* argv[])
     //terminal.print("hello bitch");
     while(true) {
         loop();
-	button();
+	//button();
     }
  
     return 0;
 }
 
+void alarm (void)
+{
+        printf("alarm triggered");
+	long interruptTime = millis();
+        if (interruptTime - lastInterruptTime>250){
+         // start sensing
+                printf("dismiss alarm");
+                
+                digitalWrite(LEDPin,0);
+		Blynk.virtualWrite(V0, 0);
+
+		//set lights low
+         }//end of if
+         lastInterruptTime =interruptTime;
+         
+}//end of alarm function
